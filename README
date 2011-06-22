@@ -1,0 +1,54 @@
+Vanity
+======
+
+Just an experiment. Very basic, only a couple of properties implemented. Not ready for use yet.
+
+Sample:
+import com.gravitydev.vanity.Vanity._
+
+val s = new Style {
+	h1(".test") {
+		fontFamily 	:= "sans-serif"
+		color 		:= 0x00ff88 important()
+		display 	:= "none"
+		width		:= 24.px important()
+		height		:= 100.px
+	}
+	
+	List( p, h1, h2 ) {
+		fontFamily	:= "sans-serif"
+	}
+	
+	h1("#testblah") {
+		color := 0x224444
+		
+		h2(".para") {
+			color := 0x234244	
+		}
+	}
+}
+
+println( s.toCSS )
+
+
+Output:
+
+h1.test {
+  font-family: sans-serif;
+  color: #00ff88 !important;
+  display: none;
+  width: 24px !important;
+  height: 100px;
+}
+
+p, h1, h2 {
+  font-family: sans-serif;
+}
+
+h1#testblah {
+  color: #224444;
+}
+h1#testblah h2.para {
+  color: #234244;
+}
+

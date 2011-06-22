@@ -4,13 +4,11 @@ import Vanity._
 
 object Sample {
 	def main (args:Array[String]){
-		val test = 24
 				
 		val s = new Style {
 			h1(".test") {
 				fontFamily 	:= "sans-serif"
-				color 		:= 234 important()
-				color 		:= 242
+				color 		:= 0x00ff88 important()
 				display 	:= "none"
 				width		:= 24.px important()
 				height		:= 100.px
@@ -21,7 +19,7 @@ object Sample {
 			}
 			
 			h1("#testblah") {
-				color := 0x23444
+				color := 0x224444
 				
 				h2(".para") {
 					color := 0x234244	
