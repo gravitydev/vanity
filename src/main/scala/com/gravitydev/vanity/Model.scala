@@ -8,21 +8,39 @@ object Model {
 		self: T => 
 		def toCSS : String
 		def apply (s:String) = this
-		var isImportant = false
-
-		def important ():T = {
-			isImportant = true
-			this
-		}
 	}
 	case class CssColor(color:Int) extends CssValue[CssColor] {
 		def toCSS = "#" + "%06x".format(color)
 	}
 	case class CssScalar (pixels:Int, unit:String) extends CssValue[CssScalar] {
 		def toCSS = pixels.toString + unit
+		
+		/* for conversion to border */
+		def solid (color:CssColor) = CssBorder(this, CssString("solid"), color)
+		def dotted (color:CssColor) = CssBorder(this, CssString("dotted"), color)
+		def dashed (color:CssColor) = CssBorder(this, CssString("dashed"), color)
 	}
 	case class CssString (text:String) extends CssValue[CssString] {
 		def toCSS = text
+	}
+	case class CssBorder (width:CssScalar, style:CssString, color:CssColor) extends CssValue[CssBorder] {
+		def toCSS = width.toCSS + " " + style.toCSS + " " + color.toCSS
+	}
+	case class CssBox (top:CssScalar, right:CssScalar, bottom:CssScalar, left:CssScalar) extends CssValue[CssBox] {
+		def toCSS = top.toCSS+" "+right.toCSS+" "+bottom.toCSS+" "+left.toCSS
+	}
+	object CssBox {
+		def apply (vertical:CssScalar, horizontal:CssScalar) :CssBox = CssBox(vertical, horizontal, vertical, horizontal)
+		def apply (all:CssScalar) :CssBox = CssBox(all, all, all, all)
+	}
+	
+	trait CssBackground extends CssValue[CssBackground]
+	case class SingleColorBackground(color:CssColor) extends CssBackground {
+		def toCSS = color.toCSS
+	}
+	
+	case class LinearGradient (start:String, color1:CssColor, color2:CssColor) extends CssBackground {
+		def toCSS = "linear-gradient("+start+", "+color1.toCSS+", "+color2.toCSS+")"
 	}
 	
 	trait Rule {
@@ -30,8 +48,8 @@ object Model {
 	}
 	
 	class NumberWrapper(num:Int) {
-		private def wrap (unit:String) = new CssScalar(num, unit)
-		def px = wrap("px")
+		private def wrap (unit:String) = CssScalar(num, unit)
+		def px() = wrap("px")
 	}
 	
 	trait Selector {
@@ -75,16 +93,45 @@ object Model {
 	
 	class Declaration[T <: CssValue[T]] (val prop:CssProperty[T]) extends Rule {
 		var value:T = _
-		def toCSS = {
-			prop.name + ": " + value.toCSS + (if (value.isImportant) " !important" else "") + ";\n"
+		
+		var isImportant = false
+		
+		def toCSS = prop match {
+			case x if x.name == "background" => value match {
+				case g:LinearGradient => {
+					"background: "+CssColor( (g.color1.color + g.color2.color) / 2 ).toCSS+ maybeImportant +";\n" +
+					"background: -moz-linear-gradient("+g.start+", "+g.color1.toCSS+", "+g.color2.toCSS+")" + maybeImportant + ";\n" +
+					"background: -webkit-gradient(linear, left top, left bottom, from("+g.color1.toCSS+"), to("+g.color2.toCSS+"))" + maybeImportant + ";\n" +
+					"background: linear-gradient("+g.start+", "+g.color1.toCSS+", "+g.color2.toCSS+")" + maybeImportant + ";\n" +
+					"filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='"+g.color1.toCSS+"', endColorstr='"+g.color2.toCSS+"')" + maybeImportant + ";\n"
+				}
+				case _ => prop.name + ": " + value.toCSS + maybeImportant + ";\n"
+			}
+			case _ => prop.name + ": " + value.toCSS + maybeImportant + ";\n"
 		}
+		
+		private def maybeImportant = if (isImportant) " !important" else ""
 		
 		def := (value:T) = {
 			this.value = value
 			this
 		}
 		
-		def important = this
+		def :=! (value:T) = {
+			this.value = value
+			this.isImportant = true
+			this
+		}
+		
+		def := (v1:CssScalar, v2:CssScalar, v3:CssScalar, v4:CssScalar) = {
+			this.value = CssBox(v1, v2, v3, v4).asInstanceOf[T]
+			this
+		}
+
+		def ! = {
+			isImportant = true
+			this
+		}
 	}
 	
 	class Css {
